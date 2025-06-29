@@ -9,6 +9,7 @@ import com.http200ok.finbuddy.product.dto.*;
 import com.http200ok.finbuddy.product.repository.DepositProductRepository;
 import com.http200ok.finbuddy.product.repository.SavingProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -28,6 +29,10 @@ public class ProductServiceImpl implements ProductService {
     private final SavingProductRepository savingProductRepository;
 
     @Override
+    @Cacheable(
+            value = "depositList", // 캐시 이름 변경 (depositProducts -> depositList)
+            key   = "T(java.lang.String).format('%s:%s:%d', #name, #bankName, #page)" // 키 생성 방식 변경
+    )
     public PagedResponseDto<ProductDto> searchDepositProductsByNameAndBank(
             String name, String bankName, int page) {
 

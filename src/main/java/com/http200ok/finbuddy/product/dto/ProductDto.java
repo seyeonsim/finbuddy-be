@@ -5,10 +5,12 @@ import com.http200ok.finbuddy.product.domain.Product;
 import com.http200ok.finbuddy.product.domain.ProductOption;
 import com.http200ok.finbuddy.product.domain.SavingProduct;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
 
+@NoArgsConstructor
 @Getter
 @Setter
 public class ProductDto {
