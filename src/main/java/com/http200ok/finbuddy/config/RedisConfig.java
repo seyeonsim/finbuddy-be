@@ -1,7 +1,6 @@
 package com.http200ok.finbuddy.config;
 
 import java.time.Duration;
-import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;

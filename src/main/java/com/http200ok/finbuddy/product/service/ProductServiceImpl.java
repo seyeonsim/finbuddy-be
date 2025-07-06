@@ -8,10 +8,13 @@ import com.http200ok.finbuddy.product.domain.SavingProduct;
 import com.http200ok.finbuddy.product.dto.*;
 import com.http200ok.finbuddy.product.repository.DepositProductRepository;
 import com.http200ok.finbuddy.product.repository.SavingProductRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ProductServiceImpl implements ProductService {
 
     private final DepositProductRepository depositProductRepository;
@@ -33,6 +37,7 @@ public class ProductServiceImpl implements ProductService {
             value = "depositList", // 캐시 이름 변경 (depositProducts -> depositList)
             key   = "T(java.lang.String).format('%s:%s:%d', #name, #bankName, #page)" // 키 생성 방식 변경
     )
+    @CircuitBreaker(name = "redisCacheBreaker", fallbackMethod = "searchDepositProductsFallback")
     public PagedResponseDto<ProductDto> searchDepositProductsByNameAndBank(
             String name, String bankName, int page) {
 
@@ -45,6 +50,19 @@ public class ProductServiceImpl implements ProductService {
         Page<ProductDto> dtoPage = products.map(ProductDto::new);
         return new PagedResponseDto<>(dtoPage);
     }
+
+    public PagedResponseDto<ProductDto> searchDepositProductsFallback(String name, String bankName, int page, Throwable t) {
+        log.warn("Circuit Breaker fallbackMethod. Falling back to direct database access for name: {}, bank: {}, page: {}. Error: {}", name, bankName, page, t.getMessage());
+
+        Pageable pageable = PageRequest.of(page, 5, Sort.by(Sort.Order.desc("disclosureStartDate")));
+
+        Page<DepositProduct> products = depositProductRepository
+                .findByNameContainingAndBank_NameContainingOrderByDisclosureStartDateDesc(name, bankName, pageable);
+
+        Page<ProductDto> dtoPage = products.map(ProductDto::new);
+        return new PagedResponseDto<>(dtoPage);
+    }
+
 
     @Override
     public PagedResponseDto<ProductDto> searchSavingProductsByNameAndBank(
