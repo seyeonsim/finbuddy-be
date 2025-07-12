@@ -6,6 +6,7 @@ import com.http200ok.finbuddy.product.domain.DepositProduct;
 import com.http200ok.finbuddy.product.domain.DepositProductOption;
 import com.http200ok.finbuddy.product.repository.DepositProductRepository;
 import com.http200ok.finbuddy.product.repository.SavingProductRepository;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -36,6 +38,15 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
     @Value("${bank.api.key}")
     private String BANK_API_KEY;
 
+    @Value("${bank.api.timeout}")
+    private int timeoutSeconds;
+
+    @Value("${bank.api.retry.max-attempts}")
+    private int maxRetryAttempts;
+
+    @Value("${bank.api.retry.delay-seconds}")
+    private int retryDelaySeconds;
+
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
 
@@ -48,6 +59,10 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
                 .uri(uri)
                 .retrieve()
                 .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
+                .retryWhen(Retry.backoff(maxRetryAttempts, Duration.ofSeconds(retryDelaySeconds))
+                        .doBeforeRetry(retrySignal -> log.warn("API 재시도 {}/{}",
+                                retrySignal.totalRetries() + 1, maxRetryAttempts)))
                 .publishOn(Schedulers.boundedElastic())
                 .flatMap(body -> Mono.fromRunnable(() -> handleResponseSync(productType, body)))
                 .then();
