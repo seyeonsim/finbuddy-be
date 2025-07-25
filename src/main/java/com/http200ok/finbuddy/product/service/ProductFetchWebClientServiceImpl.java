@@ -4,6 +4,7 @@ import com.http200ok.finbuddy.bank.domain.Bank;
 import com.http200ok.finbuddy.bank.repository.BankRepository;
 import com.http200ok.finbuddy.product.domain.DepositProduct;
 import com.http200ok.finbuddy.product.domain.DepositProductOption;
+import com.http200ok.finbuddy.product.domain.ProductType;
 import com.http200ok.finbuddy.product.repository.DepositProductRepository;
 import com.http200ok.finbuddy.product.repository.SavingProductRepository;
 import java.time.Duration;
@@ -51,8 +52,8 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
 
     @Override
-    public Mono<Void> fetchAndSaveProducts(String productType) {
-
+    public Mono<Void> fetchAndSaveProducts(String productTypeStr) {
+        ProductType productType = ProductType.from(productTypeStr);
         String uri = buildUri(productType);
 
         return webClient.get()
@@ -71,17 +72,8 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
     /**
      * 금융감독원 API URI 생성
      */
-    private String buildUri(String productType) {
-        String path;
-        if ("deposit".equals(productType)) {
-            path = "depositProductsSearch.json";
-        } else if ("saving".equals(productType)) {
-            path = "savingProductsSearch.json";
-        } else {
-            throw new IllegalArgumentException("지원하지 않는 productType: " + productType);
-        }
-
-        return BASE_URL + path +
+    private String buildUri(ProductType productType) {
+        return BASE_URL + productType.getApiPath() +
                 "?auth=" + BANK_API_KEY +
                 "&topFinGrpNo=020000&pageNo=1";
     }
@@ -90,7 +82,7 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
      * API JSON 응답을 동기 처리하며 DB 저장 (트랜잭션 적용)
      */
     @Transactional
-    public void handleResponseSync(String productType, String body) {
+    public void handleResponseSync(ProductType productType, String body) {
         JSONObject result = new JSONObject(body).getJSONObject("result");
         JSONArray baseList = result.getJSONArray("baseList");
         JSONArray optionList = result.getJSONArray("optionList");
@@ -102,16 +94,16 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
     /**
      * 개별 상품 처리: 은행 조회 혹은 저장 후 상품 저장
      */
-    private void processProduct(String type, JSONObject prod, JSONArray optionList) {
+    private void processProduct(ProductType type, JSONObject prod, JSONArray optionList) {
         String bankCode = prod.getString("fin_co_no");
         Bank bank = createOrFindBank(bankCode, prod.getString("kor_co_nm"));
 
-        if ("deposit".equals(type)) {
-            saveDeposit(prod, bank, optionList);
-        } else if ("saving".equals(type)) {
-            saveSaving(prod, bank, optionList);
+        switch (type) {
+            case DEPOSIT -> saveDeposit(prod, bank, optionList);
+            case SAVING -> saveSaving(prod, bank, optionList);
         }
     }
+
 
     /**
      * 은행 조회 또는 신규 저장
