@@ -3,6 +3,7 @@ package com.http200ok.finbuddy.product.controller;
 import com.http200ok.finbuddy.common.dto.PagedResponseDto;
 import com.http200ok.finbuddy.product.dto.*;
 import com.http200ok.finbuddy.product.service.ProductFetchService;
+import com.http200ok.finbuddy.product.service.ProductFetchWebClientService;
 import com.http200ok.finbuddy.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +19,15 @@ public class ProductController {
 
     private final ProductFetchService productFetchService;
     private final ProductService productService;
+    private final ProductFetchWebClientService productFetchWebClientService;
 
     /**
      * 예금 데이터 수집 및 저장
      */
     @PostMapping("/deposits/fetch")
     public ResponseEntity<String> fetchDepositData() {
-        productFetchService.fetchAndSaveProducts("deposit");
+        productFetchWebClientService.fetchAndSaveProducts("deposit")
+                .subscribe();
         return ResponseEntity.ok("예금 데이터 저장 완료!");
     }
 

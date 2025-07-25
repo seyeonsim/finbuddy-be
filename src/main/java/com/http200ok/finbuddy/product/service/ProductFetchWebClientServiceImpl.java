@@ -11,6 +11,11 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
@@ -87,20 +92,30 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
         JSONArray baseList = result.getJSONArray("baseList");
         JSONArray optionList = result.getJSONArray("optionList");
 
+        Map<String, List<JSONObject>> productOptionsMap = new HashMap<>();
+        IntStream.range(0, optionList.length())
+                .mapToObj(optionList::getJSONObject)
+                .forEach(optionJson -> {
+                    String productCode = optionJson.getString("fin_prdt_cd");
+                    productOptionsMap
+                            .computeIfAbsent(productCode, k -> new ArrayList<>()) // 해당 상품 코드가 없으면 새 리스트 생성
+                            .add(optionJson); // 옵션 추가
+                });
+
         IntStream.range(0, baseList.length())
-                .forEach(i -> processProduct(productType, baseList.getJSONObject(i), optionList));
+                .forEach(i -> processProduct(productType, baseList.getJSONObject(i), productOptionsMap));
     }
 
     /**
      * 개별 상품 처리: 은행 조회 혹은 저장 후 상품 저장
      */
-    private void processProduct(ProductType type, JSONObject prod, JSONArray optionList) {
+    private void processProduct(ProductType type, JSONObject prod, Map<String, List<JSONObject>> productOptionsMap) {
         String bankCode = prod.getString("fin_co_no");
         Bank bank = createOrFindBank(bankCode, prod.getString("kor_co_nm"));
 
         switch (type) {
-            case DEPOSIT -> saveDeposit(prod, bank, optionList);
-            case SAVING -> saveSaving(prod, bank, optionList);
+            case DEPOSIT -> saveDeposit(prod, bank, productOptionsMap); // Map 전달
+            case SAVING -> saveSaving(prod, bank, productOptionsMap); // Map 전달 (나중에 구현)
         }
     }
 
@@ -121,7 +136,7 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
     /**
      * 예금상품 저장 (중복 이름 + 은행인 경우 저장 안함)
      */
-    private void saveDeposit(JSONObject p, Bank bank, JSONArray optionList) {
+    private void saveDeposit(JSONObject p, Bank bank, Map<String, List<JSONObject>> productOptionsMap) {
         if (depositProductRepository.findByNameAndBank(p.getString("fin_prdt_nm"), bank).isPresent()) return;
 
         DepositProduct dep = DepositProduct.createProduct(
@@ -136,9 +151,11 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
                 parseDateTime(p.optString("fin_co_subm_day", null))
         );
 
-        for (int j = 0; j < optionList.length(); j++) {
-            JSONObject o = optionList.getJSONObject(j);
-            if (!o.getString("fin_prdt_cd").equals(p.getString("fin_prdt_cd"))) continue;
+        // Map에서 해당 상품의 옵션만 가져와 순회
+        String currentProductCode = p.getString("fin_prdt_cd");
+        List<JSONObject> optionsForCurrentProduct = productOptionsMap.getOrDefault(currentProductCode, Collections.emptyList());
+
+        for (JSONObject o : optionsForCurrentProduct) { // 해당 상품의 옵션만 순회
             dep.addOption(DepositProductOption.createDepositProductOption(
                     dep, o.optString("intr_rate_type", null), o.optString("intr_rate_type_nm", null),
                     o.optInt("save_trm", 0), o.optDouble("intr_rate", 0.0), o.optDouble("intr_rate2", 0.0)));
@@ -150,7 +167,7 @@ public class ProductFetchWebClientServiceImpl implements ProductFetchWebClientSe
     /**
      * 적금상품 저장
      */
-    private void saveSaving(JSONObject p, Bank bank, JSONArray optionList) {
+    private void saveSaving(JSONObject p, Bank bank, Map<String, List<JSONObject>> productOptionsMap) {
         // TODO: 기존 적금 저장 로직 구현
     }
 
