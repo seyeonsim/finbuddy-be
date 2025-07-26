@@ -4,6 +4,7 @@ import com.http200ok.finbuddy.product.domain.DepositProduct;
 import com.http200ok.finbuddy.product.domain.Product;
 import com.http200ok.finbuddy.product.domain.ProductOption;
 import com.http200ok.finbuddy.product.domain.SavingProduct;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,7 +15,7 @@ import java.util.List;
 @Getter
 @Setter
 public class ProductDto {
-    private Long productId;
+    private UUID productId;
     private String bankName;
     private String bankLogoUrl;
     private String productName;

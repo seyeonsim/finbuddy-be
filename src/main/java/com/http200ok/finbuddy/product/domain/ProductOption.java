@@ -1,6 +1,7 @@
 package com.http200ok.finbuddy.product.domain;
 
 import jakarta.persistence.*;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,9 +15,9 @@ import lombok.Setter;
 public abstract class ProductOption {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "product_option_id")
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "product_option_id", columnDefinition = "BINARY(16)")
+    private UUID id;
 
     @Column
     private String interestRateType; // 저축 금리 유형

@@ -2,6 +2,7 @@ package com.http200ok.finbuddy.product.dto;
 
 import com.http200ok.finbuddy.product.domain.SavingProduct;
 import com.http200ok.finbuddy.product.domain.SubscriptionRestriction;
+import java.util.UUID;
 import lombok.Getter;
 
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.stream.Collectors;
 
 @Getter
 public class SavingProductDto {
-    private Long productId;
+    private UUID productId;
     private String bankName;
     private String bankLogoUrl;
     private String name;

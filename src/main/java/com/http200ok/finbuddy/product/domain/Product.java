@@ -2,6 +2,7 @@ package com.http200ok.finbuddy.product.domain;
 
 import com.http200ok.finbuddy.bank.domain.Bank;
 import jakarta.persistence.*;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,9 +22,9 @@ import java.time.YearMonth;
 public abstract class Product {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "product_id")
-    protected Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "product_id", columnDefinition = "BINARY(16)")
+    protected UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bank_id", nullable = false)

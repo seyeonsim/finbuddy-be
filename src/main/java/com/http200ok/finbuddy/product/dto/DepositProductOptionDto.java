@@ -1,11 +1,12 @@
 package com.http200ok.finbuddy.product.dto;
 
 import com.http200ok.finbuddy.product.domain.DepositProductOption;
+import java.util.UUID;
 import lombok.Getter;
 
 @Getter
 public class DepositProductOptionDto {
-    private Long productOptionId;
+    private UUID productOptionId;
     private String interestRateType;
     private String interestRateTypeName;
     private Integer savingTerm;
